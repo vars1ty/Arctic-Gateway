@@ -1,0 +1,19 @@
+[build]
+target = "x86_64-pc-windows-gnu"
+[target.x86_64-pc-windows-msvc]
+linker = "clang"
+rustflags = [
+  "-C", "link-arg=-Wl,-O3,-fuse-ld=/usr/bin/mold",
+  "-Lnative=/home/stackalloc/.xwin/crt/lib/x86_64",
+  "-Lnative=/home/stackalloc/.xwin/sdk/lib/um/x86_64",
+  "-Lnative=/home/stackalloc/.xwin/sdk/lib/ucrt/x86_64"
+]
+
+[target.i686-pc-windows-msvc]
+linker = "clang"
+rustflags = [
+  "-C", "link-arg=-fuse-ld=/usr/bin/mold",
+  "-Lnative=/home/stackalloc/.xwin/crt/lib/x86",
+  "-Lnative=/home/stackalloc/.xwin/sdk/lib/um/x86",
+  "-Lnative=/home/stackalloc/.xwin/sdk/lib/ucrt/x86"
+]

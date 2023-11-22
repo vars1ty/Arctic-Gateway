@@ -1,0 +1,11 @@
+[package]
+name = "arctic_template"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+retour = { git = "https://github.com/vars1ty/retour-rs.git", features = ["static-detour"] }
+dll-syringe = "0.15.2"
