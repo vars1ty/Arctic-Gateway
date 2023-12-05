@@ -1,16 +1,3 @@
-/// Equivalent to typing `extern "Rust" fn (/* Types */) -> // Return Type`.
-/// The return is optional and non-required.
-/// Example: `myfn: rfn!((i32) -> String)`
-#[macro_export]
-macro_rules! rfn {
-    (($($args:ty),*) -> $ret:ty) => {
-        extern "Rust" fn($($args),*) -> $ret
-    };
-    ($($args:ty),*) => {
-        extern "Rust" fn($($args),*)
-    };
-}
-
 /// `dynamic::log(message)` function. Logs both to the side-messages, and to `stdout`.
 #[macro_export]
 macro_rules! log {
@@ -53,7 +40,48 @@ macro_rules! rune_vm_execute {
     };
 }
 
-/// `dynamic::create_thread_key(name)` function. Creates a globally-accessible thread-key.
+/// `ui::add_label(identifier, text)` function. Creates a new label with the specified content.
+#[macro_export]
+macro_rules! ui_add_label {
+    ($name:expr, $text:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_label($name.to_owned(), $text.to_owned());
+        }
+    };
+}
+
+/// `ui::add_button(identifier, text, code)` function. Creates a new button with the specified
+/// text and Rune code.
+#[macro_export]
+macro_rules! ui_add_button {
+    ($name:expr, $text:expr, $source:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_button($name.to_owned(), $text.to_owned(), $source.to_owned());
+        }
+    };
+}
+
+/// `ui::add_separator(identifier)` function. Adds a new horizontal separator.
+#[macro_export]
+macro_rules! ui_add_separator {
+    ($name:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_separator($name.to_owned());
+        }
+    };
+}
+
+/// `ui::add_spacing(identifier, x, y)` function. Adds spacing between widgets.
+#[macro_export]
+macro_rules! ui_add_spacing {
+    ($name:expr, $x:expr, $y:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_spacing($name.to_owned(), $x, $y);
+        }
+    };
+}
+
+/// Rune VM which you may use to execute Rune code.
 #[macro_export]
 macro_rules! create_thread_key {
     ($name:expr) => {
@@ -63,7 +91,7 @@ macro_rules! create_thread_key {
     };
 }
 
-/// `dynamic::set_thread_key_value(name, value)` function. Sets the value of a thread-key.
+/// Rune VM which you may use to execute Rune code.
 #[macro_export]
 macro_rules! set_thread_key_value {
     ($name:expr, $value:expr) => {
@@ -73,7 +101,7 @@ macro_rules! set_thread_key_value {
     };
 }
 
-/// `dynamic::get_thread_key(name)` function. Returns the value of the thread-key.
+/// Rune VM which you may use to execute Rune code.
 #[macro_export]
 macro_rules! get_thread_key {
     ($name:expr) => {
@@ -133,6 +161,30 @@ macro_rules! enable_hook {
             }
 
             hook
+        }
+    };
+}
+
+/// `ui::get_i32_slider_value(identifier)` function. Returns the i32 value of a defined slider.
+#[macro_export]
+macro_rules! get_i32_slider_value {
+    ($name:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.get_i32_slider_value($name.to_owned())
+        } else {
+            0
+        }
+    };
+}
+
+/// `ui::get_f32_slider_value(identifier)` function. Returns the f32 value of a defined slider.
+#[macro_export]
+macro_rules! get_f32_slider_value {
+    ($name:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.get_f32_slider_value($name.to_owned())
+        } else {
+            0.0
         }
     };
 }
