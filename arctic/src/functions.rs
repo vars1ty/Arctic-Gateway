@@ -1,9 +1,9 @@
 use crate::rfn;
 use dll_syringe::process::*;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, Arc};
 
 /// A set of useful functions from dynamic.
-pub static FUNCTIONS: OnceLock<DNXFunctions> = OnceLock::new();
+pub static FUNCTIONS: OnceLock<Arc<DNXFunctions>> = OnceLock::new();
 
 /// A structure that contains a set of functions from dynamic.
 #[repr(C)]

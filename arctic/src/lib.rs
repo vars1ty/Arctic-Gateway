@@ -1,5 +1,6 @@
 use crate::functions::*;
 use dll_syringe::process::{BorrowedProcess, OwnedProcess, ProcessModule};
+use std::sync::Arc;
 
 mod functions;
 
@@ -15,7 +16,7 @@ mod macros;
 pub fn arctic_gateway(
     process: OwnedProcess,
     payload: ProcessModule<BorrowedProcess<'static>>,
-    functions: DNXFunctions,
+    functions: Arc<DNXFunctions>,
 ) {
     // Store the functions structure globally.
     FUNCTIONS.get_or_init(|| functions);
