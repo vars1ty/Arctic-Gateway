@@ -40,12 +40,32 @@ macro_rules! rune_vm_execute {
     };
 }
 
+/// `ui::add_window(name)` function. Allocates and displays a new custom window.
+#[macro_export]
+macro_rules! ui_add_window {
+    ($identifier:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_window($identifier.to_owned());
+        }
+    };
+}
+
+/// `ui::focus_window` function. Focuses the defined window if present.
+#[macro_export]
+macro_rules! ui_focus_window {
+    ($identifier:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_focus_window($identifier.to_owned());
+        }
+    };
+}
+
 /// `ui::add_label(identifier, text)` function. Creates a new label with the specified content.
 #[macro_export]
 macro_rules! ui_add_label {
-    ($name:expr, $text:expr) => {
+    ($identifier:expr, $text:expr, $font_id:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.ui_add_label($name.to_owned(), $text.to_owned());
+            functions.ui_add_label($identifier.to_owned(), $text.to_owned(), $font_id);
         }
     };
 }
@@ -54,9 +74,14 @@ macro_rules! ui_add_label {
 /// text and Rune code.
 #[macro_export]
 macro_rules! ui_add_button {
-    ($name:expr, $text:expr, $source:expr) => {
+    ($identifier:expr, $text:expr, $source:expr, $callback:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.ui_add_button($name.to_owned(), $text.to_owned(), $source.to_owned());
+            functions.ui_add_button(
+                $identifier.to_owned(),
+                $text.to_owned(),
+                $source.to_owned(),
+                $callback,
+            );
         }
     };
 }
@@ -64,9 +89,9 @@ macro_rules! ui_add_button {
 /// `ui::add_separator(identifier)` function. Adds a new horizontal separator.
 #[macro_export]
 macro_rules! ui_add_separator {
-    ($name:expr) => {
+    ($identifier:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.ui_add_separator($name.to_owned());
+            functions.ui_add_separator($identifier.to_owned());
         }
     };
 }
@@ -74,39 +99,39 @@ macro_rules! ui_add_separator {
 /// `ui::add_spacing(identifier, x, y)` function. Adds spacing between widgets.
 #[macro_export]
 macro_rules! ui_add_spacing {
-    ($name:expr, $x:expr, $y:expr) => {
+    ($identifier:expr, $x:expr, $y:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.ui_add_spacing($name.to_owned(), $x, $y);
+            functions.ui_add_spacing($identifier.to_owned(), $x, $y);
         }
     };
 }
 
-/// Rune VM which you may use to execute Rune code.
+/// `dynamic::create_thread_key(name)` function. Creates a globally-accessible thread-key.
 #[macro_export]
 macro_rules! create_thread_key {
-    ($name:expr) => {
+    ($identifier:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.create_thread_key($name.to_owned());
+            functions.create_thread_key($identifier.to_owned());
         }
     };
 }
 
-/// Rune VM which you may use to execute Rune code.
+/// `dynamic::set_thread_key_value(name, value)` function. Sets the value of a thread-key.
 #[macro_export]
 macro_rules! set_thread_key_value {
-    ($name:expr, $value:expr) => {
+    ($identifier:expr, $value:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.set_thread_key_value($name.to_owned(), $value);
+            functions.set_thread_key_value($identifier.to_owned(), $value);
         }
     };
 }
 
-/// Rune VM which you may use to execute Rune code.
+/// `dynamic::get_thread_key(name)` function. Returns the value of the thread-key.
 #[macro_export]
 macro_rules! get_thread_key {
-    ($name:expr) => {
+    ($identifier:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.get_thread_key($name.to_owned())
+            functions.get_thread_key($identifier.to_owned())
         } else {
             false
         }
@@ -118,11 +143,11 @@ macro_rules! get_thread_key {
 /// cleanup.
 #[macro_export]
 macro_rules! setup_auto_eject_tk_listener {
-    ($name:expr, $process:expr, $payload:expr, $on_pre_eject:expr) => {
-        create_thread_key!($name);
-        set_thread_key_value!($name, false);
+    ($identifier:expr, $process:expr, $payload:expr, $on_pre_eject:expr) => {
+        create_thread_key!($identifier);
+        set_thread_key_value!($identifier, false);
         std::thread::spawn(move || {
-            while !get_thread_key!($name) {
+            while !get_thread_key!($identifier) {
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
 
@@ -168,9 +193,9 @@ macro_rules! enable_hook {
 /// `ui::get_i32_slider_value(identifier)` function. Returns the i32 value of a defined slider.
 #[macro_export]
 macro_rules! get_i32_slider_value {
-    ($name:expr) => {
+    ($identifier:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.get_i32_slider_value($name.to_owned())
+            functions.get_i32_slider_value($identifier.to_owned())
         } else {
             0
         }
@@ -180,11 +205,118 @@ macro_rules! get_i32_slider_value {
 /// `ui::get_f32_slider_value(identifier)` function. Returns the f32 value of a defined slider.
 #[macro_export]
 macro_rules! get_f32_slider_value {
-    ($name:expr) => {
+    ($identifier:expr) => {
         if let Some(functions) = $crate::functions::FUNCTIONS.get() {
-            functions.get_f32_slider_value($name.to_owned())
+            functions.get_f32_slider_value($identifier.to_owned())
         } else {
             0.0
+        }
+    };
+}
+
+/// `ui::set_next_item_same_line(identifier)` function. Attempts to make the next upcoming
+/// widget on the currently-active line.
+#[macro_export]
+macro_rules! ui_set_next_item_same_line {
+    ($identifier:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_set_next_item_same_line($identifier.to_owned());
+        }
+    };
+}
+
+/// `ui::add_custom_font_label(identifier, text, relative_font_path)` function. Adds a new
+/// label with a custom-loaded font.
+#[macro_export]
+macro_rules! ui_add_custom_font_label {
+    ($identifier:expr, $text:expr, $relative_font_path:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_custom_font_label(
+                $identifier.to_owned(),
+                $text.to_owned(),
+                $relative_font_path.to_owned(),
+            );
+        }
+    };
+}
+
+/// `ui::remove_widget(identifier)` function. Attempts to remove the specified widget from the
+/// focused window.
+#[macro_export]
+macro_rules! ui_remove_widget {
+    ($identifier:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_remove_widget($identifier.to_owned());
+        }
+    };
+}
+
+/// `ui::remove_all_widgets()` function. Removes all widgets from the focused window.
+#[macro_export]
+macro_rules! ui_remove_all_widgets {
+    () => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_remove_all_widgets();
+        }
+    };
+}
+
+/// `ui::add_i32_slider(identifier, text, min, max, rune_code)` function. Adds a i32 slider to
+/// the UI with optional Rune code execution.
+#[macro_export]
+macro_rules! ui_add_i32_slider {
+    ($identifier:expr, $text:expr, $min:expr, $max:expr, $rune_code:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_i32_slider(
+                $identifier.to_owned(),
+                $text.to_owned(),
+                $min,
+                $max,
+                $rune_code,
+            );
+        }
+    };
+}
+
+/// `ui::add_f32_slider(identifier, text, min, max, rune_code)` function. Adds a f32 slider to
+/// the UI with optional Rune code execution.
+#[macro_export]
+macro_rules! ui_add_f32_slider {
+    ($identifier:expr, $text:expr, $min:expr, $max:expr, $rune_code:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.ui_add_f32_slider(
+                $identifier.to_owned(),
+                $text.to_owned(),
+                $min,
+                $max,
+                $rune_code,
+            );
+        }
+    };
+}
+
+/// `Sellix::is_paying_for_product(product_id, bearer_tolen)` function. Checks if the user is
+/// paying for the specified Sellix product.
+#[macro_export]
+macro_rules! sellix_is_paying_for_product {
+    ($product_id:expr, $bearer_token:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.sellix_is_paying_for_product($product_id.to_owned(), $bearer_token.to_owned())
+        } else {
+            false
+        }
+    };
+}
+
+/// `Config::has_serial(serial)` function. Checks if the defined serial is present in the
+/// config.
+#[macro_export]
+macro_rules! config_has_serial {
+    ($serial:expr) => {
+        if let Some(functions) = $crate::functions::FUNCTIONS.get() {
+            functions.config_has_serial($serial.to_owned())
+        } else {
+            false
         }
     };
 }
