@@ -1,18 +1,18 @@
-use crate::rfn;
 use dll_syringe::process::*;
-use std::sync::{OnceLock, Arc};
+use std::sync::{Arc, OnceLock};
 
 /// A set of useful functions from dynamic.
 pub static FUNCTIONS: OnceLock<Arc<DNXFunctions>> = OnceLock::new();
 
 /// A structure that contains a set of functions from dynamic.
-#[repr(C)]
+#[allow(dead_code)]
+#[allow(clippy::type_complexity)]
 pub struct DNXFunctions {
     /// `dynamic::log(message)` function. Logs both to the side-messages, and to `stdout`.
     dynamic_log: extern "Rust" fn(&str),
 
     /// `Memory::read_string(address) function. Attempts to read a string at `address`.
-    memory_read_string: extern "Rust" fn(i64) -> String,
+    memory_read_string: extern "Rust" fn(i64) -> &'static str,
 
     /// `PXScript::execute(code, send_to_party, use_main_thread)` function. Executes a script and
     /// optionally sends it to the party.
@@ -37,12 +37,18 @@ pub struct DNXFunctions {
     /// `dynamic::get_thread_key(name)` function. Returns the value of the thread-key.
     dynamic_get_thread_key: extern "Rust" fn(String) -> bool,
 
+    /// `ui::add_window(name)` function. Allocates and displays a new custom window.
+    ui_add_window: Box<dyn Fn(String) + Send + Sync>,
+
+    /// `ui::focus_window` function. Focuses the defined window if present.
+    ui_focus_window: Box<dyn Fn(String) + Send + Sync>,
+
     /// `ui::add_label(identifier, text)` function. Creates a new label with the specified content.
-    ui_add_label: Box<dyn Fn(String, String) + Send + Sync>,
+    ui_add_label: Box<dyn Fn(String, String, usize) + Send + Sync>,
 
     /// `ui::add_button(identifier, text, code)` function. Creates a new button with the specified
     /// text and Rune code.
-    ui_add_button: Box<dyn Fn(String, String, String) + Send + Sync>,
+    ui_add_button: Box<dyn Fn(String, String, String, Option<extern "Rust" fn()>) + Send + Sync>,
 
     /// `ui::add_separator(identifier)` function. Adds a new horizontal separator.
     ui_add_separator: Box<dyn Fn(String) + Send + Sync>,
@@ -55,6 +61,37 @@ pub struct DNXFunctions {
 
     /// `ui::get_f32_slider_value(identifier)` function. Returns the f32 value of a defined slider.
     ui_get_f32_slider_value: Box<dyn Fn(String) -> f32 + Send + Sync>,
+
+    /// `ui::set_next_item_same_line(identifier)` function. Attempts to make the next upcoming
+    /// widget on the currently-active line.
+    ui_set_next_item_same_line: Box<dyn Fn(String) + Send + Sync>,
+
+    /// `ui::add_custom_font_label(identifier, text, relative_font_path)` function. Adds a new
+    /// label with a custom-loaded font.
+    ui_add_custom_font_label: Box<dyn Fn(String, String, String) + Send + Sync>,
+
+    /// `ui::remove_widget(identifier)` function. Attempts to remove the specified widget from the
+    /// focused window.
+    ui_remove_widget: Box<dyn Fn(String) + Send + Sync>,
+
+    /// `ui::remove_all_widgets()` function. Removes all widgets from the focused window.
+    ui_remove_all_widgets: Box<dyn Fn() + Send + Sync>,
+
+    /// `ui::add_i32_slider(identifier, text, min, max, rune_code)` function. Adds a i32 slider to
+    /// the UI with optional Rune code execution.
+    ui_add_i32_slider: Box<dyn Fn(String, String, i32, i32, Option<String>) + Send + Sync>,
+
+    /// `ui::add_f32_slider(identifier, text, min, max, rune_code)` function. Adds a f32 slider to
+    /// the UI with optional Rune code execution.
+    ui_add_f32_slider: Box<dyn Fn(String, String, f32, f32, Option<String>) + Send + Sync>,
+
+    /// `Sellix::is_paying_for_product(product_id, bearer_tolen)` function. Checks if the user is
+    /// paying for the specified Sellix product.
+    sellix_is_paying_for_product: Box<dyn Fn(String, String) -> bool + Send + Sync>,
+
+    /// `Config::has_serial(serial)` function. Checks if the defined serial is present in the
+    /// config.
+    config_has_serial: Box<dyn Fn(String) -> bool + Send + Sync>,
 }
 
 impl DNXFunctions {
@@ -64,7 +101,7 @@ impl DNXFunctions {
     }
 
     /// `Memory::read_string(address) function. Attempts to read a string at `address`.
-    pub fn memory_read_string(&self, address: i64) -> String {
+    pub fn memory_read_string(&self, address: i64) -> &'static str {
         (self.memory_read_string)(address)
     }
 
@@ -94,15 +131,31 @@ impl DNXFunctions {
         (self.rune_vm_execute)(source);
     }
 
+    /// `ui::add_window(name)` function. Allocates and displays a new custom window.
+    pub fn ui_add_window(&self, name: String) {
+        (self.ui_add_window)(name);
+    }
+
+    /// `ui::focus_window` function. Focuses the defined window if present.
+    pub fn ui_focus_window(&self, name: String) {
+        (self.ui_focus_window)(name);
+    }
+
     /// `ui::add_label(identifier, text)` function. Creates a new label with the specified content.
-    pub fn ui_add_label(&self, identifier: String, text: String) {
-        (self.ui_add_label)(identifier, text);
+    pub fn ui_add_label(&self, identifier: String, text: String, font_id: usize) {
+        (self.ui_add_label)(identifier, text, font_id);
     }
 
     /// `ui::add_button(identifier, text, code)` function. Creates a new button with the specified
     /// text and Rune code.
-    pub fn ui_add_button(&self, identifier: String, text: String, source: String) {
-        (self.ui_add_button)(identifier, text, source);
+    pub fn ui_add_button(
+        &self,
+        identifier: String,
+        text: String,
+        source: String,
+        callback: Option<extern "Rust" fn()>,
+    ) {
+        (self.ui_add_button)(identifier, text, source, callback);
     }
 
     /// `ui::add_separator(identifier)` function. Adds a new horizontal separator.
@@ -138,5 +191,71 @@ impl DNXFunctions {
     /// `ui::get_f32_slider_value(identifier)` function. Returns the f32 value of a defined slider.
     pub fn get_f32_slider_value(&self, identifier: String) -> f32 {
         (self.ui_get_f32_slider_value)(identifier)
+    }
+
+    /// `ui::set_next_item_same_line(identifier)` function. Attempts to make the next upcoming
+    /// widget on the currently-active line.
+    pub fn ui_set_next_item_same_line(&self, identifier: String) {
+        (self.ui_set_next_item_same_line)(identifier);
+    }
+
+    /// `ui::add_custom_font_label(identifier, text, relative_font_path)` function. Adds a new
+    /// label with a custom-loaded font.
+    pub fn ui_add_custom_font_label(
+        &self,
+        identifier: String,
+        text: String,
+        relative_font_path: String,
+    ) {
+        (self.ui_add_custom_font_label)(identifier, text, relative_font_path);
+    }
+
+    /// `ui::remove_widget(identifier)` function. Attempts to remove the specified widget from the
+    /// focused window.
+    pub fn ui_remove_widget(&self, identifier: String) {
+        (self.ui_remove_widget)(identifier);
+    }
+
+    /// `ui::remove_all_widgets()` function. Removes all widgets from the focused window.
+    pub fn ui_remove_all_widgets(&self) {
+        (self.ui_remove_all_widgets)();
+    }
+
+    /// `ui::add_i32_slider(identifier, text, min, max, rune_code)` function. Adds a i32 slider to
+    /// the UI with optional Rune code execution.
+    pub fn ui_add_i32_slider(
+        &self,
+        identifier: String,
+        text: String,
+        min: i32,
+        max: i32,
+        rune_code: Option<String>,
+    ) {
+        (self.ui_add_i32_slider)(identifier, text, min, max, rune_code);
+    }
+
+    /// `ui::add_f32_slider(identifier, text, min, max, rune_code)` function. Adds a f32 slider to
+    /// the UI with optional Rune code execution.
+    pub fn ui_add_f32_slider(
+        &self,
+        identifier: String,
+        text: String,
+        min: f32,
+        max: f32,
+        rune_code: Option<String>,
+    ) {
+        (self.ui_add_f32_slider)(identifier, text, min, max, rune_code);
+    }
+
+    /// `Sellix::is_paying_for_product(product_id, bearer_tolen)` function. Checks if the user is
+    /// paying for the specified Sellix product.
+    pub fn sellix_is_paying_for_product(&self, product_id: String, bearer_token: String) -> bool {
+        (self.sellix_is_paying_for_product)(product_id, bearer_token)
+    }
+
+    /// `Config::has_serial(serial)` function. Checks if the defined serial is present in the
+    /// config.
+    pub fn config_has_serial(&self, serial: String) -> bool {
+        (self.config_has_serial)(serial)
     }
 }
